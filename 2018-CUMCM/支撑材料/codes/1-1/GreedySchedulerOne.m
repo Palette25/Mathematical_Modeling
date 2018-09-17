@@ -1,8 +1,8 @@
 %% 以启发式优先规则指派算法为核心的，单工序处理调度器函数 -- Matlab实现 %%
 % 输入参数：R1,R2,R3分别为RGV机器人移动1,2,3个单位所需时间
 % n为一台CNC处理一道工序物料所需时间，T1,T2为RGV分别为奇数，偶数CNC上下料时间
-% W为清洗一个熟料的时间，对于总体约束时间的设置参数P
-function [origin_count, produce_count, point_arr, time_arr, produce_arr, cncs_path, rgv_path] = GreedySchedulerOne(R1, R2, R3, n, T1, T2, W)
+% W为清洗一个熟料的时间
+function [origin_count, produce_count, point_arr, time_arr, produce_arr, cncs_path, rgv_path] = GreedySchedulerOne(R1, R2, R3, n, T1, T2, W, p1, p2)
 origin_count = 0; % 记录所用生料数量
 produce_count = 0; % 记录生成成品数量
 cnc_state = zeros(8, 1); % 表示8台CNC当前状态, 0空闲，1工作
@@ -21,11 +21,6 @@ end
 
 % 定义数组结构体：struct('demand', 'order', 'type', 'val') -> [a1,a2,a3,a4], 0 in demand for begin, 1 for end
 for i=1:8
-   if mod(i,2) == 0
-       T = T2;
-   else
-       T = T1;
-   end
    task = [0, i, mod(i,2)~=0, abs(rgv_pos - ((i + (mod(i, 2)~=0))/2-1))];
    queue.push(task);
 end
@@ -42,7 +37,7 @@ while ~queue.isEmpty() && time <= 28.8
     end
     % 启发式搜索的核心，每次操作收取新任务，以及更新每个任务估价，排序
     [cnc_state, queue] = CheckStateAndRecover(cnc_state, queue, time, rgv_pos);
-    [cnc_state, queue] = ReceiveDemandAndSort(time, cnc_state, rgv_pos, queue, R1, R2, R3, T1, T2);
+    [cnc_state, queue] = ReceiveDemandAndSort(time, cnc_state, rgv_pos, queue, R1, R2, R3, T1, T2, p1, p2);
     top = queue.poll();
     rel_dis = abs(rgv_pos - ((top(2) + top(3))/2-1));
     switch rel_dis
@@ -69,7 +64,7 @@ while ~queue.isEmpty() && time <= 28.8
        [cncs_path, rgv_path] = GainInitResult(cncs_path, rgv_path, origin_count, top(2), top(3), time, temp_T+n);
        time = time + temp_T;
        cnc_state(top(2)) = time + n;
-       [cnc_state, count] = LossJudger(cnc_state, time, count);
+       %[cnc_state, count] = LossJudger(cnc_state, time, count);
     else
         % 拿取熟料过程
         temp_T = 0;
@@ -81,10 +76,10 @@ while ~queue.isEmpty() && time <= 28.8
         produce_count = produce_count + 1;
         % 放下生料过程
         origin_count = origin_count + 1;
-        cnc_state(top(2)) = time + n;
         [cncs_path, rgv_path] = GainInitResult(cncs_path, rgv_path, origin_count, top(2), top(3), time, temp_T+W+n);
         time = time + temp_T;
-        [cnc_state, count] = LossJudger(cnc_state, time, count);
+        cnc_state(top(2)) = time + n;
+        %[cnc_state, count] = LossJudger(cnc_state, time, count);
         % 清洗熟料过程
         time = time + W;
     end
@@ -92,7 +87,7 @@ while ~queue.isEmpty() && time <= 28.8
     while queue.isEmpty() && time <= 28.8
        time = time + 0.001;
        [cnc_state, queue] = CheckStateAndRecover(cnc_state, queue, time, rgv_pos);
-       [cnc_state, queue] = ReceiveDemandAndSort(time, cnc_state, rgv_pos, queue, R1, R2, R3, T1, T2);
+       [cnc_state, queue] = ReceiveDemandAndSort(time, cnc_state, rgv_pos, queue, R1, R2, R3, T1, T2, p1, p2);
     end
 end
 time_arr = [time_arr, time];
