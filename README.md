@@ -1,3 +1,3 @@
 # Matlab_Programs
-## Basic Matlab Programs, with some projects in Mathematocal modeling competitions.
-### Keep learning Matlab and joining in more competitions........
+
+Storing school Mathematical Modeling Competition result, including papers and matlab codes~
